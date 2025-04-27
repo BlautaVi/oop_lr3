@@ -45,33 +45,28 @@ def sql_sorted_data():
     conn.close()
     return sorted_data
 
-# --- Основна логіка ---
 original_data = fetch_data()
 
 print("Оригінальні дані:", original_data)
 
-# Bubble sort
 start = time.time()
 bubble_result = bubble_sort(original_data)
 bubble_time = time.time() - start
 print("\nСортування бульбашкою:", bubble_result)
 print("Час сортування бульбашкою:", bubble_time)
 
-# Insertion sort
 start = time.time()
 insertion_result = insertion_sort(original_data)
 insertion_time = time.time() - start
 print("\nСортування вставками:", insertion_result)
 print("Час сортування вставками:", insertion_time)
 
-# SQL sort
 start = time.time()
 sql_result = sql_sorted_data()
 sql_time = time.time() - start
 print("\nСортування SQL (ORDER BY):", sql_result)
 print("Час SQL-сортування:", sql_time)
 
-# Порівняння
 print("\n--- Порівняння часу ---")
 print(f"Bubble sort: {bubble_time:.6f} сек")
 print(f"Insertion sort: {insertion_time:.6f} сек")
