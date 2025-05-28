@@ -1,10 +1,30 @@
 <template>
   <div>
-    <div v-if="tasks.length === 0" class="alert alert-info">Немає завдань.</div>
-    <div v-for="task in tasks" :key="task.id" class="task-item">
-      <input type="checkbox" v-model="task.done" @change="toggleDone(task)" />
-      <span :style="{ textDecoration: task.done ? 'line-through' : 'none' }">{{ task.title }}</span>
-      <button @click="deleteTask(task.id)" class="btn btn-danger btn-sm">🗑️</button>
+    <div class="filter-container">
+      <label>Фільтрувати по дню:</label>
+      <select v-model="selectedDay">
+        <option value="">Усі дні</option>
+        <option v-for="(dayName, key) in days" :key="key" :value="key">{{ dayName }}</option>
+      </select>
+    </div>
+
+    <div class="card-grid">
+      <div
+          v-for="(group, day) in filteredGroups"
+          :key="day"
+          class="day-card card"
+      >
+        <div class="card-header">
+          {{ days[day] }} ({{ group.length }})
+        </div>
+        <ul class="card-body">
+          <li v-for="task in group" :key="task.id" class="task-row">
+            <input type="checkbox" v-model="task.done" @change="toggleDone(task)" />
+            <span :class="{ done: task.done }">{{ task.title }}</span>
+            <button @click="deleteTask(task.id)" class="delete-btn">-</button>
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
@@ -15,31 +35,52 @@ import { collection, getDocs, doc, deleteDoc, updateDoc } from "firebase/firesto
 
 export default {
   data() {
-    return { tasks: [] };
+    return {
+      tasks: [],
+      selectedDay: '',
+      days: {
+        0: "Понеділок",
+        1: "Вівторок",
+        2: "Середа",
+        3: "Четвер",
+        4: "П’ятниця",
+      }
+    };
+  },
+  computed: {
+    groupedTasks() {
+      const groups = {};
+      this.tasks.forEach(task => {
+        const date = task.created?.toDate ? task.created.toDate() : new Date(task.created);
+        const day = date.getDay();
+        if (!groups[day]) groups[day] = [];
+        groups[day].push(task);
+      });
+      return groups;
+    },
+    filteredGroups() {
+      if (!this.selectedDay) return this.groupedTasks;
+      return { [this.selectedDay]: this.groupedTasks[this.selectedDay] || [] };
+    }
   },
   methods: {
     async fetchTasks() {
       try {
         const querySnapshot = await getDocs(collection(db, "tasks"));
-        this.tasks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        this.tasks = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
       } catch (error) {
         console.error("Помилка завантаження завдань:", error);
       }
     },
     async deleteTask(id) {
-      try {
-        await deleteDoc(doc(db, "tasks", id));
-        this.fetchTasks();
-      } catch (error) {
-        console.error("Помилка видалення завдання:", error);
-      }
+      await deleteDoc(doc(db, "tasks", id));
+      this.fetchTasks();
     },
     async toggleDone(task) {
-      try {
-        await updateDoc(doc(db, "tasks", task.id), { done: task.done });
-      } catch (error) {
-        console.error("Помилка оновлення завдання:", error);
-      }
+      await updateDoc(doc(db, "tasks", task.id), { done: task.done });
     }
   },
   mounted() {
@@ -47,21 +88,3 @@ export default {
   }
 };
 </script>
-
-<style scoped>
-.task-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.btn-danger {
-  background-color: #dc3545;
-  border-color: #dc3545;
-  color: white;
-}
-.btn-sm {
-  padding: 2px 6px;
-  font-size: 0.875rem;
-}
-</style>

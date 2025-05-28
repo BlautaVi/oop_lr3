@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1>📚 Трекер домашніх завдань</h1>
+    <h1>Трекер домашніх завдань</h1>
     <AddTask @refresh="refreshTasks" />
     <TaskList ref="taskList" />
   </div>
