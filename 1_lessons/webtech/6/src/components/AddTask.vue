@@ -8,7 +8,7 @@
 <script>
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
-
+import { auth } from "../firebase";
 export default {
   data() {
     return { title: "" };
@@ -20,7 +20,8 @@ export default {
         await addDoc(collection(db, "tasks"), {
           title: this.title,
           done: false,
-          created: new Date()
+          created: new Date(),
+          userId: auth.currentUser.uid
         });
         this.title = "";
         this.$emit("refresh");

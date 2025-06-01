@@ -1,21 +1,40 @@
 <template>
   <div>
-    <h1>Трекер домашніх завдань</h1>
-    <AddTask @refresh="refreshTasks" />
-    <TaskList ref="taskList" />
+    <div v-if="isAuthenticated" class="jumbotron">
+      <h1>Вітаємо, {{ userEmail }}!</h1>
+    </div>
+    <Auth v-if="!isAuthenticated" @close="showAuth = false" />
+    <TaskList v-if="isAuthenticated" />
   </div>
 </template>
 
 <script>
-import AddTask from "../components/AddTask.vue";
-import TaskList from "../components/TaskList.vue";
+import Auth from "@/components/Auth.vue";
+import TaskList from "@/components/TaskList.vue";
+import { auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default {
-  components: { AddTask, TaskList },
-  methods: {
-    refreshTasks() {
-      this.$refs.taskList.fetchTasks();
-    }
+  components: { Auth, TaskList },
+  data() {
+    return {
+      showAuth: true,
+      isAuthenticated: false,
+      userEmail: null
+    };
+  },
+  mounted() {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        this.isAuthenticated = true;
+        this.userEmail = user.email;
+        this.showAuth = false;
+      } else {
+        this.isAuthenticated = false;
+        this.userEmail = null;
+        this.showAuth = true;
+      }
+    });
   }
 };
 </script>

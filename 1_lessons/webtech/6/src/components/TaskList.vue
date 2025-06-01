@@ -1,4 +1,5 @@
 <template>
+
   <div>
     <div class="filter-container">
       <label>Фільтрувати по дню:</label>
@@ -9,6 +10,9 @@
     </div>
 
     <div class="card-grid">
+      <div class="day-card add-card" @click="addNewDay">
+        <div class="plus-icon">+</div>
+      </div>
       <div
           v-for="(group, day) in filteredGroups"
           :key="day"
@@ -27,26 +31,19 @@
       </div>
     </div>
   </div>
+  <AddTask @refresh="fetchTasks" />
+
 </template>
 
+
 <script>
-import { db } from "../firebase";
-import { collection, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import {auth, db} from "../firebase";
+import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from "firebase/firestore";
+import { query, where } from "firebase/firestore";
+
+import {onAuthStateChanged} from "firebase/auth";
 
 export default {
-  data() {
-    return {
-      tasks: [],
-      selectedDay: '',
-      days: {
-        0: "Понеділок",
-        1: "Вівторок",
-        2: "Середа",
-        3: "Четвер",
-        4: "П’ятниця",
-      }
-    };
-  },
   computed: {
     groupedTasks() {
       const groups = {};
@@ -60,31 +57,59 @@ export default {
     },
     filteredGroups() {
       if (!this.selectedDay) return this.groupedTasks;
-      return { [this.selectedDay]: this.groupedTasks[this.selectedDay] || [] };
+      return {[this.selectedDay]: this.groupedTasks[this.selectedDay] || []};
     }
+  },
+  data() {
+    return {
+      tasks: [],
+      selectedDay: '',
+      days: {
+        0: "Неділя",
+        1: "Понеділок",
+        2: "Вівторок",
+        3: "Середа",
+        4: "Четвер",
+        5: "П’ятниця",
+        6: "Субота",
+      }
+    };
   },
   methods: {
     async fetchTasks() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "tasks"));
-        this.tasks = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } catch (error) {
-        console.error("Помилка завантаження завдань:", error);
-      }
+      const q = query(collection(db, "tasks"), where("userId", "==", auth.currentUser.uid));
+      const querySnapshot = await getDocs(q);
+      this.tasks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
     async deleteTask(id) {
       await deleteDoc(doc(db, "tasks", id));
-      this.fetchTasks();
+      await this.fetchTasks();
     },
     async toggleDone(task) {
-      await updateDoc(doc(db, "tasks", task.id), { done: task.done });
+      await updateDoc(doc(db, "tasks", task.id), {done: task.done});
+    },
+    async addNewDay() {
+      const title = prompt("Введіть завдання:");
+      if (!title) return;
+      try {
+        await addDoc(collection(db, "tasks"), {
+          title,
+          done: false,
+          created: new Date(),
+          userId: auth.currentUser.uid
+        });
+        await this.fetchTasks();
+      } catch (error) {
+        console.error("Помилка додавання:", error);
+      }
+
     }
   },
   mounted() {
-    this.fetchTasks();
-  }
+    onAuthStateChanged(auth, (user) => {
+      if (user) this.fetchTasks();
+    });
+  },
+
 };
 </script>
